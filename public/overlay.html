@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kick Hypertrain Overlay</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    html,body{margin:0;overflow:hidden;background:transparent;font-family:Inter,Arial,sans-serif}
+    #hud{position:fixed;left:50%;transform:translateX(-50%);bottom:5%;width:70%;padding:14px;border-radius:16px;background:rgba(10,18,34,.78);backdrop-filter:blur(6px);color:#fff;border:1px solid rgba(99,158,255,.6)}
+    #bar{height:16px;border-radius:999px;background:#1a2438;overflow:hidden}
+    #fill{height:100%;width:0%;background:linear-gradient(90deg,#5c4dff,#00d8ff,#5eff9d);transition:width .3s ease}
+    #title{font-size:26px;font-weight:900;letter-spacing:1px;text-shadow:0 0 15px #7dc7ff}
+    #meta{display:flex;justify-content:space-between;opacity:.95;font-weight:700}
+  </style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="hud">
+  <div id="title">HYPERTRAIN READY</div>
+  <div id="meta"><span id="lvl">LVL 1</span><span id="timer">0s</span></div>
+  <div id="bar"><div id="fill"></div></div>
+</div>
+<script>
+const canvas = document.getElementById('bg');
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 100);
+camera.position.z = 7;
+const tunnel = [];
+for(let i=0;i<120;i++){
+  const g=new THREE.TorusGeometry(2.6+i*0.23, 0.018, 8, 40);
+  const m=new THREE.MeshBasicMaterial({color:new THREE.Color(`hsl(${(i*12)%360},100%,60%)`), transparent:true, opacity:0.34});
+  const mesh=new THREE.Mesh(g,m); mesh.position.z=-i*0.52; scene.add(mesh); tunnel.push(mesh);
+}
+function resize(){renderer.setSize(innerWidth, innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize', resize); resize();
+function animate(){requestAnimationFrame(animate); tunnel.forEach((r,i)=>{r.rotation.z += 0.006+(i*0.00002); r.position.z += 0.09; if(r.position.z>2){r.position.z=-60}}); renderer.render(scene,camera);} animate();
+
+const ctx = new (window.AudioContext||window.webkitAudioContext)();
+function playAlert(){
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type='sawtooth'; o.frequency.value=440;
+  g.gain.value=0.001; o.connect(g); g.connect(ctx.destination); o.start();
+  g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.04);
+  o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+  o.stop(ctx.currentTime + 0.41);
+}
+
+const socket = io();
+let lastType = '';
+socket.on('state', ({type, state}) => {
+  if(!state) return;
+  const pct = state.goal ? Math.min(100, (state.progress/state.goal)*100) : 0;
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('lvl').textContent = `LVL ${state.level}`;
+  document.getElementById('timer').textContent = `${state.remainingSec}s`;
+  document.getElementById('title').textContent = state.active ? 'KICK HYPERTRAIN' : 'HYPERTRAIN READY';
+  if((type==='started' || type==='level_up') && type!==lastType){
+    playAlert();
+    document.getElementById('hud').animate([{transform:'translateX(-50%) scale(1)'},{transform:'translateX(-50%) scale(1.05)'},{transform:'translateX(-50%) scale(1)'}],{duration:420});
+  }
+  lastType = type;
+});
+</script>
+</body></html>
