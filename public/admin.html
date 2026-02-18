@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kick Hypertrain Admin</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;margin:0;background:#0b1220;color:#eaf0ff}
+    .wrap{max-width:1100px;margin:auto;padding:24px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .card{background:#131d31;border:1px solid #243552;border-radius:14px;padding:16px}
+    input,button{padding:10px;border-radius:10px;border:1px solid #2b3d5f;background:#0f1729;color:#fff}
+    button{cursor:pointer;background:linear-gradient(135deg,#5f56ff,#03c4ff);border:none;font-weight:700}
+    pre{max-height:220px;overflow:auto;background:#0a1120;padding:12px;border-radius:10px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .big{font-size:28px;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Kick Hypertrain Admin Panel</h1>
+    <div class="row">
+      <input id="token" placeholder="ADMIN_TOKEN" style="min-width:260px" />
+      <button onclick="loadStats()">Odśwież statystyki</button>
+      <button onclick="simulate('gifterA')">Symuluj Gift #1</button>
+      <button onclick="simulate('gifterB')">Symuluj Gift #2</button>
+      <button onclick="stopTrain()">Stop Train</button>
+    </div>
+    <br/>
+    <div class="grid">
+      <div class="card"><div>Poziom</div><div class="big" id="level">1</div></div>
+      <div class="card"><div>Progress</div><div class="big" id="progress">0 / 0</div></div>
+      <div class="card"><div>Pozostało</div><div class="big" id="remaining">0s</div></div>
+    </div>
+    <br/>
+    <div class="grid">
+      <div class="card"><h3>Top gifterzy</h3><pre id="topGifters">-</pre></div>
+      <div class="card"><h3>Ostatnie pociągi</h3><pre id="trains">-</pre></div>
+      <div class="card"><h3>Logi</h3><pre id="logs">-</pre></div>
+    </div>
+  </div>
+<script>
+const socket = io();
+socket.on('state', ({state}) => {
+  if(!state) return;
+  document.getElementById('level').textContent = state.level + (state.active ? ' 🔥' : '');
+  document.getElementById('progress').textContent = `${state.progress} / ${state.goal}`;
+  document.getElementById('remaining').textContent = `${state.remainingSec}s`;
+});
+
+function token(){return document.getElementById('token').value.trim();}
+async function simulate(gifter){
+  await fetch('/api/simulate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token()},body:JSON.stringify({gifter,quantity:5})});
+}
+async function stopTrain(){
+  await fetch('/api/train/stop',{method:'POST',headers:{'x-admin-token':token()}});
+}
+async function loadStats(){
+  const headers={'x-admin-token':token()};
+  const [stats, logs] = await Promise.all([
+    fetch('/api/stats',{headers}).then(r=>r.json()),
+    fetch('/api/logs',{headers}).then(r=>r.json())
+  ]);
+  document.getElementById('topGifters').textContent = JSON.stringify(stats.topGifters,null,2);
+  document.getElementById('trains').textContent = JSON.stringify(stats.recentTrains,null,2);
+  document.getElementById('logs').textContent = (logs.logs||[]).join('\n');
+}
+</script>
+</body></html>

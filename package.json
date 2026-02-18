@@ -1,0 +1,21 @@
+{
+  "name": "kick-hypertrain",
+  "version": "1.0.0",
+  "description": "Kick Hypertrain Bot with HTTPS overlay, admin UI, queue, levels and stats",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.0"
+  }
+}
